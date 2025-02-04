@@ -6,6 +6,11 @@ const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PORT = 4000 } = process.env;
 const base = "https://api-m.sandbox.paypal.com";
 const app = express();
 
+if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+  console.error("必要な PayPal の環境変数が設定されていません！");
+  process.exit(1);
+}
+
 app.set("view engine", "ejs");
 app.set("views", "./server/views");
 
