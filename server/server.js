@@ -87,7 +87,7 @@ const createOrder = async (cart) => {
               method: "SCA_ALWAYS",
           },
           vault: {
-           "store_in_vault": "ON_SUCCESS",
+              store_in_vault: "ON_SUCCESS",
         }
       }
     }
