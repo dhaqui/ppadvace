@@ -88,6 +88,7 @@ const createOrder = async (cart) => {
           },
           vault: {
               store_in_vault: "ON_SUCCESS",
+          }
         }
       }
     }
