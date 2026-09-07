@@ -2,7 +2,7 @@ import express from "express";
 import fetch from "node-fetch";
 import "dotenv/config";
 
-const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PORT = 4000 } = process.env;
+const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PORT = 4000, TEST_COUNTRY = "MW" } = process.env;
 const base = "https://api-m.sandbox.paypal.com";
 const app = express();
 
@@ -29,6 +29,30 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.static(path.join(__dirname, "public")));
 
+/**
+ * 検証用の shipping address プリセット。
+ * 郵便番号(postal_code)をあえて未設定にして、国ごとの必須/任意仕様の挙動を比較する。
+ * 参照: https://developer.paypal.com/api/rest/reference/orders/v2/country-address-requirements/
+ *   - Malawi (MW): city=Required / postal_code=Optional
+ *   - United States (US): city=Required / postal_code=Required
+ *
+ * .env の TEST_COUNTRY で "MW" か "US" を切り替えられる。
+ */
+const SHIPPING_ADDRESS_PRESETS = {
+  MW: {
+    address_line_1: "P.O. Box 123",
+    admin_area_2: "Lilongwe",
+    country_code: "MW",
+    // postal_code はあえて未設定（Malawi の仕様検証用）
+  },
+  US: {
+    address_line_1: "123 Main St",
+    admin_area_2: "San Jose",
+    admin_area_1: "CA",
+    country_code: "US",
+    // postal_code はあえて未設定（US の仕様検証用。US は Required のためエラーが想定される）
+  },
+};
 
 /**
  * Generate an OAuth 2.0 access token for authenticating with PayPal REST APIs.
@@ -68,6 +92,16 @@ const createOrder = async (cart) => {
     cart,
   );
 
+  // フロントエンドから country が渡された場合はそれを優先、なければ .env の TEST_COUNTRY を使う
+  const countryKey = (cart && cart.country) || TEST_COUNTRY;
+  const shippingAddress =
+    SHIPPING_ADDRESS_PRESETS[countryKey] || SHIPPING_ADDRESS_PRESETS.MW;
+
+  console.log(
+    `[shipping address test] country=${countryKey} address=`,
+    shippingAddress,
+  );
+
   const accessToken = await generateAccessToken();
   const url = `${base}/v2/checkout/orders`;
   const payload = {
@@ -77,6 +111,12 @@ const createOrder = async (cart) => {
         amount: {
           currency_code: "USD",
           value: "1",
+        },
+        shipping: {
+          name: {
+            full_name: "Test Buyer",
+          },
+          address: shippingAddress,
         },
       },
     ],
@@ -184,4 +224,5 @@ app.get("/", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Node server listening at http://localhost:${PORT}/`);
+  console.log(`[shipping address test] TEST_COUNTRY=${TEST_COUNTRY} (.env で MW / US を切り替え可能)`);
 });
