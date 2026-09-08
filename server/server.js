@@ -82,7 +82,7 @@ const SHIPPING_ADDRESS_PRESETS = {
     address_line_1: "123 Main St",
     admin_area_2: "Zzzznotarealcity999", // 実在しない/郵便番号と整合しない city
     admin_area_1: "AAA",
-    postal_code: "111111",
+    postal_code: "",
     country_code: "US",
   },
 };
