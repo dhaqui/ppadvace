@@ -2,7 +2,7 @@ import express from "express";
 import fetch from "node-fetch";
 import "dotenv/config";
 
-const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PORT = 4000, TEST_COUNTRY = "US" } = process.env;
+const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PORT = 4000, TEST_COUNTRY = "MW" } = process.env;
 const base = "https://api-m.sandbox.paypal.com";
 const app = express();
 
@@ -31,12 +31,17 @@ app.use(express.static(path.join(__dirname, "public")));
 
 /**
  * 検証用の shipping address プリセット。
- * 郵便番号(postal_code)をあえて未設定にして、国ごとの必須/任意仕様の挙動を比較する。
  * 参照: https://developer.paypal.com/api/rest/reference/orders/v2/country-address-requirements/
  *   - Malawi (MW): city=Required / postal_code=Optional
  *   - United States (US): city=Required / postal_code=Required
  *
- * .env の TEST_COUNTRY で "MW" か "US" を切り替えられる。
+ * .env の TEST_COUNTRY で切り替えられる。キー一覧:
+ *   MW                      : postal_code 未設定・city あり            → 想定: 成功 (postal Optional)
+ *   US                      : postal_code 未設定・city あり            → 想定: エラー POSTAL_CODE_REQUIRED
+ *   US_VALID                : postal_code あり・city あり (正常系)      → 想定: 成功
+ *   US_POSTAL_ONLY_NO_CITY  : postal_code あり・city は空文字/未設定    → city 必須が本当に強制されるか確認用
+ *   US_POSTAL_GARBAGE_CITY  : postal_code あり・city はデタラメな文字列 → postal codeさえあれば city の中身は問われないか確認用
+ *   MW_GARBAGE_CITY         : postal_code 未設定・city はデタラメな文字列 → Malawi 側でも city の中身チェックがあるか確認用
  */
 const SHIPPING_ADDRESS_PRESETS = {
   MW: {
@@ -45,12 +50,40 @@ const SHIPPING_ADDRESS_PRESETS = {
     country_code: "MW",
     // postal_code はあえて未設定（Malawi の仕様検証用）
   },
+  MW_GARBAGE_CITY: {
+    address_line_1: "P.O. Box 123",
+    admin_area_2: "Zzzznotarealcity999",
+    country_code: "MW",
+    // postal_code は未設定のまま、city にデタラメな値を入れて中身チェックの有無を見る
+  },
   US: {
     address_line_1: "123 Main St",
     admin_area_2: "San Jose",
     admin_area_1: "CA",
     country_code: "US",
     // postal_code はあえて未設定（US の仕様検証用。US は Required のためエラーが想定される）
+  },
+  US_VALID: {
+    address_line_1: "123 Main St",
+    admin_area_2: "San Jose",
+    admin_area_1: "CA",
+    postal_code: "95131",
+    country_code: "US",
+    // 正常系（比較用ベースライン）
+  },
+  US_POSTAL_ONLY_NO_CITY: {
+    address_line_1: "123 Main St",
+    admin_area_2: "", // city を空文字にして送信（丸ごと省略したい場合はこのキー自体を消してください）
+    admin_area_1: "CA",
+    postal_code: "95131",
+    country_code: "US",
+  },
+  US_POSTAL_GARBAGE_CITY: {
+    address_line_1: "123 Main St",
+    admin_area_2: "Zzzznotarealcity999", // 実在しない/郵便番号と整合しない city
+    admin_area_1: "CA",
+    postal_code: "95131",
+    country_code: "US",
   },
 };
 
