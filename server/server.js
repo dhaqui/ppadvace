@@ -81,7 +81,7 @@ const SHIPPING_ADDRESS_PRESETS = {
   US_POSTAL_GARBAGE_CITY: {
     address_line_1: "123 Main St",
     admin_area_2: "Zzzznotarealcity999", // 実在しない/郵便番号と整合しない city
-    admin_area_1: "CA",
+    admin_area_1: "CAA",
     postal_code: "95131",
     country_code: "US",
   },
